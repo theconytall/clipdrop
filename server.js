@@ -1,33 +1,38 @@
 
 const express = require("express");
 const rateLimit = require("express-rate-limit");
+const crypto = require("crypto");
 const path = require("path");
+const { Readable } = require("stream");
+const { pipeline } = require("stream/promises");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.SNAPANY_API_KEY;
+
+const sessions = new Map();
 
 app.use(express.json({ limit: "10kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/api", rateLimit({
   windowMs: 60 * 1000,
-  limit: 20
+  limit: 15
 }));
 
-const sessions = new Map();
-
 app.get("/health", (req, res) => {
-  res.json({ status: "ok" });
+  res.json({ status: "ok", app: "ClipDrop" });
 });
 
 app.post("/api/analyze", async (req, res) => {
   try {
     if (!API_KEY) {
-      return res.status(500).json({ error: "API key is not configured." });
+      return res.status(500).json({
+        error: "SNAPANY_API_KEY is missing in Render environment variables."
+      });
     }
 
-    const { url } = req.body || {};
+    const url = String(req.body?.url || "").trim();
 
     let parsed;
     try {
@@ -36,12 +41,21 @@ app.post("/api/analyze", async (req, res) => {
       return res.status(400).json({ error: "Enter a valid YouTube URL." });
     }
 
-    const host = parsed.hostname.toLowerCase();
+    const allowedHosts = [
+      "youtube.com",
+      "www.youtube.com",
+      "m.youtube.com",
+      "music.youtube.com",
+      "youtu.be"
+    ];
+
     if (
-      !["youtube.com", "www.youtube.com", "m.youtube.com",
-        "music.youtube.com", "youtu.be"].includes(host)
+      parsed.protocol !== "https:" ||
+      !allowedHosts.includes(parsed.hostname.toLowerCase())
     ) {
-      return res.status(400).json({ error: "YouTube links only." });
+      return res.status(400).json({
+        error: "Please enter a valid YouTube HTTPS link."
+      });
     }
 
     const response = await fetch(
@@ -52,11 +66,12 @@ app.post("/api/analyze", async (req, res) => {
           Authorization: `Bearer ${API_KEY}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url }),
+        signal: AbortSignal.timeout(60000)
       }
     );
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       return res.status(response.status).json({
@@ -64,110 +79,147 @@ app.post("/api/analyze", async (req, res) => {
       });
     }
 
-    const videos = (data.medias || [])
-      .filter(media => media.media_type === "video");
+    const videoMedia = (data.medias || []).filter(
+      media => media.media_type === "video"
+    );
 
-    const audios = (data.medias || [])
-      .filter(media => media.media_type === "audio");
+    const audioMedia = (data.medias || []).filter(
+      media => media.media_type === "audio"
+    );
 
-    const id = require("crypto").randomUUID();
+    const videos = videoMedia
+      .filter(media => media.resource_proxy_url)
+      .map(media => ({
+        variants: [{
+          quality: media.quality_label || "Available video",
+          url: media.resource_proxy_url
+        }]
+      }));
 
-    sessions.set(id, { videos, audios, created: Date.now() });
+    const audio = audioMedia.find(media => media.resource_proxy_url);
+
+    if (!videos.length && !audio) {
+      return res.status(422).json({
+        error: "No downloadable proxy files were returned for this video."
+      });
+    }
+
+    const id = crypto.randomUUID();
+
+    sessions.set(id, {
+      videos,
+      audio: audio?.resource_proxy_url || null,
+      created: Date.now()
+    });
 
     res.json({
       id,
       title: data.title || "YouTube video",
-      videos: videos.map(media => ({
-        quality: media.quality || "Available",
-        variants: (media.variants || [])
-          .filter(v => v.resource_proxy_url || v.video_proxy_url)
-          .map(v => ({
-            quality: v.quality,
-            url: v.resource_proxy_url || v.video_proxy_url,
-            ext: v.video_ext || "mp4"
-          }))
-      })),
-      audioAvailable: audios.some(a => a.resource_proxy_url)
+      videos,
+      audioAvailable: Boolean(audio)
     });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Could not analyze that video." });
+    console.error("Analyze error:", error);
+    res.status(500).json({
+      error: "Could not analyze the video. Please try again."
+    });
   }
 });
+
+async function streamProxyFile(url, res, filename, contentType) {
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(120000)
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error(`Media provider returned HTTP ${response.status}`);
+  }
+
+  res.setHeader("Content-Type", contentType);
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${filename}"`
+  );
+
+  await pipeline(Readable.fromWeb(response.body), res);
+}
 
 app.get("/api/download/:id/:index", async (req, res) => {
   try {
     const session = sessions.get(req.params.id);
+
     if (!session) {
-      return res.status(404).json({ error: "Session expired. Analyze again." });
+      return res.status(404).json({
+        error: "Download session expired. Analyze the video again."
+      });
     }
 
-    const variants = session.videos.flatMap(v => v.variants || []);
-    const variant = variants[Number(req.params.index)];
+    const index = Number(req.params.index);
+    const variant = session.videos[index]?.variants?.[0];
 
-    if (!variant || !variant.resource_proxy_url && !variant.video_proxy_url) {
-      return res.status(404).json({ error: "That quality is unavailable." });
+    if (!variant?.url) {
+      return res.status(404).json({
+        error: "That video format is unavailable."
+      });
     }
 
-    const mediaUrl = variant.resource_proxy_url || variant.video_proxy_url;
-    const file = await fetch(mediaUrl);
+    await streamProxyFile(
+      variant.url,
+      res,
+      "clipdrop-video.mp4",
+      "video/mp4"
+    );
 
-    if (!file.ok) {
-      return res.status(502).json({ error: "The download link expired. Analyze again." });
-    }
-
-    res.setHeader("Content-Type", "video/mp4");
-    res.setHeader("Content-Disposition", 'attachment; filename="clipdrop-video.mp4"');
-
-    if (file.body) {
-      const { Readable } = require("stream");
-      Readable.fromWeb(file.body).pipe(res);
-    } else {
-      res.status(502).end();
-    }
   } catch (error) {
-    console.error(error);
-    if (!res.headersSent) res.status(500).json({ error: "Download failed." });
+    console.error("Video download error:", error);
+
+    if (!res.headersSent) {
+      res.status(502).json({
+        error: "Video download failed. Analyze the video again."
+      });
+    }
   }
 });
 
 app.get("/api/audio/:id", async (req, res) => {
   try {
     const session = sessions.get(req.params.id);
-    if (!session) {
-      return res.status(404).json({ error: "Session expired. Analyze again." });
+
+    if (!session || !session.audio) {
+      return res.status(404).json({
+        error: "Audio is unavailable. Analyze the video again."
+      });
     }
 
-    const audio = session.audios.find(a => a.resource_proxy_url);
+    await streamProxyFile(
+      session.audio,
+      res,
+      "clipdrop-audio.m4a",
+      "audio/mp4"
+    );
 
-    if (!audio) {
-      return res.status(404).json({ error: "Audio is unavailable." });
-    }
-
-    const file = await fetch(audio.resource_proxy_url);
-
-    if (!file.ok) {
-      return res.status(502).json({ error: "Audio link expired. Analyze again." });
-    }
-
-    res.setHeader("Content-Type", "audio/mp4");
-    res.setHeader("Content-Disposition", 'attachment; filename="clipdrop-audio.m4a"');
-
-    const { Readable } = require("stream");
-    Readable.fromWeb(file.body).pipe(res);
   } catch (error) {
-    console.error(error);
-    if (!res.headersSent) res.status(500).json({ error: "Audio download failed." });
+    console.error("Audio download error:", error);
+
+    if (!res.headersSent) {
+      res.status(502).json({
+        error: "Audio download failed. Analyze the video again."
+      });
+    }
   }
 });
 
-// Remove expired sessions every 10 minutes.
+// Remove expired sessions.
 setInterval(() => {
-  const cutoff = Date.now() - 30 * 60 * 1000;
+  const cutoff = Date.now() - 25 * 60 * 1000;
+
   for (const [id, session] of sessions) {
-    if (session.created < cutoff) sessions.delete(id);
+    if (session.created < cutoff) {
+      sessions.delete(id);
+    }
   }
-}, 10 * 60 * 1000);
+}, 5 * 60 * 1000);
 
 app.listen(PORT, () => {
   console.log(`ClipDrop running on port ${PORT}`);
