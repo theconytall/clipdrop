@@ -1,0 +1,114 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClipDrop — Video Downloader</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#090b12;color:#f4f5fa;font-family:Arial,sans-serif;min-height:100vh;display:grid;place-items:center;padding:20px}
+main{width:min(650px,100%);text-align:center}
+.logo{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:12px}
+.logo span{color:#8b78ff}
+p{color:#999fb1;line-height:1.6}
+.panel{background:#121522;border:1px solid #252a3c;border-radius:18px;padding:24px;margin-top:28px;text-align:left}
+input{width:100%;padding:16px;background:#090d18;border:1px solid #30364a;border-radius:10px;color:white;font-size:15px;outline:none}
+button{border:0;border-radius:10px;padding:14px 18px;background:#8068ff;color:white;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+#analyze{width:100%;margin-top:12px}
+#result{display:none;margin-top:22px}
+.option{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #292e40}
+.small{font-size:12px;color:#9299aa}
+#status{margin-top:15px;font-size:14px;color:#b8b0ff}
+</style>
+</head>
+<body>
+<main>
+<div class="logo">Clip<span>Drop</span></div>
+<p>Simple video downloads. Paste a YouTube link to get started.</p>
+
+<section class="panel">
+<input id="url" type="url" placeholder="Paste YouTube URL here..." />
+<button id="analyze">Analyze video</button>
+<div id="status"></div>
+<div id="result">
+<h3 id="title">Video</h3>
+<div id="videos"></div>
+<div id="audio"></div>
+</div>
+</section>
+<p class="small">Only download videos you own or have permission to use.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let currentId = null;
+
+$("analyze").addEventListener("click", async () => {
+  const url = $("url").value.trim();
+  if (!url) return $("status").textContent = "Paste a YouTube link first.";
+
+  $("analyze").disabled = true;
+  $("status").textContent = "Analyzing video...";
+  $("result").style.display = "none";
+
+  try {
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({url})
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Analysis failed.");
+
+    currentId = data.id;
+    $("title").textContent = data.title || "Your video";
+    $("videos").innerHTML = "";
+
+    const variants = (data.videos || []).flatMap(group => group.variants || []);
+
+    variants.forEach((variant, index) => {
+      const row = document.createElement("div");
+      row.className = "option";
+
+      const label = document.createElement("span");
+      label.textContent = variant.quality || "MP4";
+
+      const button = document.createElement("button");
+      button.textContent = "Download";
+      button.addEventListener("click", () => {
+        window.location.href = `/api/download/${encodeURIComponent(currentId)}/${index}`;
+      });
+
+      row.append(label, button);
+      $("videos").append(row);
+    });
+
+    if (!variants.length) {
+      $("videos").textContent = "No video formats were returned.";
+    }
+
+    $("audio").innerHTML = "";
+    if (data.audioAvailable) {
+      const button = document.createElement("button");
+      button.textContent = "Download audio";
+      button.style.marginTop = "16px";
+      button.addEventListener("click", () => {
+        window.location.href = `/api/audio/${encodeURIComponent(currentId)}`;
+      });
+      $("audio").append(button);
+    }
+
+    $("result").style.display = "block";
+    $("status").textContent = "Video analyzed.";
+  } catch (error) {
+    $("status").textContent = error.message;
+  } finally {
+    $("analyze").disabled = false;
+  }
+});
+</script>
+</body>
+</html>
