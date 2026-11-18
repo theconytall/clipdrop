@@ -1,1 +1,187 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipDrop — Free Video Tool</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  min-height:100vh;background:#090911;color:#f5f5fa;
+  font-family:Inter,system-ui,Arial,sans-serif;
+  display:flex;justify-content:center;padding:45px 18px;
+}
+.container{width:100%;max-width:850px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:75px}
+.logo{font-size:25px;font-weight:800;letter-spacing:-1px}
+.logo span{color:#a78bfa}
+.pill{font-size:12px;color:#a78bfa;background:#a78bfa16;border:1px solid #a78bfa35;padding:8px 13px;border-radius:30px}
+.hero{text-align:center;margin-bottom:35px}
+.hero h1{font-size:clamp(35px,7vw,57px);letter-spacing:-2px;margin-bottom:14px}
+.hero h1 span{color:#a78bfa}
+.hero p{color:#9292a5;font-size:15px;line-height:1.7}
+.panel{background:#11111c;border:1px solid #252536;border-radius:19px;padding:25px;box-shadow:0 20px 80px #0005}
+.tabs{display:flex;gap:10px;margin-bottom:23px}
+.tab{flex:1;padding:13px;border:1px solid #29293a;border-radius:10px;background:#171725;color:#aaaabd;cursor:pointer;font-size:14px}
+.tab.active{background:#a78bfa1c;border-color:#a78bfa;color:#c4b5fd}
+.section{display:none}
+.section.active{display:block}
+.label{display:block;color:#c4c4d4;font-size:13px;margin-bottom:10px}
+.drop{border:1px dashed #45405f;background:#171725;border-radius:13px;padding:35px 15px;text-align:center;cursor:pointer;transition:.2s}
+.drop:hover,.drop.drag{border-color:#a78bfa;background:#a78bfa0b}
+.drop .symbol{font-size:32px;margin-bottom:12px}
+.drop strong{display:block;margin-bottom:7px}
+.drop small{color:#85859a}
+input[type=file]{display:none}
+input[type=url]{width:100%;background:#090911;border:1px solid #303044;color:white;padding:15px;border-radius:10px;outline:none;font-size:14px}
+input[type=url]:focus{border-color:#a78bfa}
+button.action{width:100%;margin-top:15px;padding:14px;background:#a78bfa;color:#100c1d;font-weight:750;border:0;border-radius:10px;cursor:pointer;font-size:14px;transition:.2s}
+button.action:hover{background:#c4b5fd;transform:translateY(-1px)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.preview{display:none;margin-top:22px}
+video{width:100%;max-height:400px;background:#000;border-radius:12px}
+.fileinfo{color:#a5a5b8;font-size:12px;margin-top:10px;word-break:break-word}
+.status{font-size:13px;color:#b7a4ff;margin-top:13px;min-height:20px}
+.note{font-size:12px;color:#77778c;line-height:1.7;margin-top:20px;text-align:center}
+footer{text-align:center;color:#626276;font-size:12px;margin-top:30px}
+@media(max-width:500px){header{margin-bottom:55px}.panel{padding:17px}.tabs{gap:6px}.tab{font-size:12px;padding:12px 5px}}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <div class="logo">Clip<span>Drop</span>.</div>
+  <div class="pill">FREE · NO API CREDITS</div>
+</header>
+
+<div class="hero">
+  <h1>Your videos.<br><span>Your control.</span></h1>
+  <p>Preview and save your video files in one simple place.<br>No account. No API key. No subscriptions.</p>
+</div>
+
+<div class="panel">
+  <div class="tabs">
+    <button class="tab active" id="localTab">Local file</button>
+    <button class="tab" id="urlTab">Video link</button>
+  </div>
+
+  <div class="section active" id="localSection">
+    <label class="label">Choose a video from your device</label>
+    <div class="drop" id="drop">
+      <div class="symbol">📁</div>
+      <strong>Drop your video here</strong>
+      <small>or click to browse your files</small>
+    </div>
+    <input type="file" id="file" accept="video/*">
+    <div class="status" id="localStatus"></div>
+    <div class="preview" id="localPreview">
+      <video id="localVideo" controls playsinline></video>
+      <div class="fileinfo" id="fileInfo"></div>
+      <button class="action" id="saveLocal">Save video to device</button>
+    </div>
+  </div>
+
+  <div class="section" id="urlSection">
+    <label class="label" for="videoUrl">Direct video file URL</label>
+    <input type="url" id="videoUrl" placeholder="https://example.com/video.mp4">
+    <button class="action" id="loadUrl">Preview video</button>
+    <div class="status" id="urlStatus"></div>
+    <div class="preview" id="urlPreview">
+      <video id="urlVideo" controls playsinline></video>
+      <button class="action" id="saveUrl">Open video link</button>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  ClipDrop runs in your browser. Local files stay on your device.<br>
+  Direct links must point to video files and allow browser playback.<br>
+  Only use videos you own or have permission to download.
+</div>
+<footer>CLIPDROP © 2026 · SIMPLE. FREE. PRIVATE.</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let localObjectUrl = null;
+
+function switchTab(which){
+  const local = which === "local";
+  $("localTab").classList.toggle("active",local);
+  $("urlTab").classList.toggle("active",!local);
+  $("localSection").classList.toggle("active",local);
+  $("urlSection").classList.toggle("active",!local);
+}
+$("localTab").onclick = () => switchTab("local");
+$("urlTab").onclick = () => switchTab("url");
+
+function loadFile(file){
+  if(!file) return;
+  if(!file.type.startsWith("video/")){
+    $("localStatus").textContent = "Please choose a video file.";
+    return;
+  }
+  if(localObjectUrl) URL.revokeObjectURL(localObjectUrl);
+  localObjectUrl = URL.createObjectURL(file);
+  $("localVideo").src = localObjectUrl;
+  $("localPreview").style.display = "block";
+  $("fileInfo").textContent = file.name + " · " + (file.size/1024/1024).toFixed(2) + " MB";
+  $("localStatus").textContent = "Video loaded successfully.";
+}
+$("drop").onclick = () => $("file").click();
+$("file").onchange = e => loadFile(e.target.files[0]);
+$("drop").ondragover = e => {e.preventDefault();$("drop").classList.add("drag")};
+$("drop").ondragleave = () => $("drop").classList.remove("drag");
+$("drop").ondrop = e => {
+  e.preventDefault();
+  $("drop").classList.remove("drag");
+  loadFile(e.dataTransfer.files[0]);
+};
+
+$("saveLocal").onclick = () => {
+  if(!localObjectUrl) return;
+  const a = document.createElement("a");
+  a.href = localObjectUrl;
+  a.download = $("file").files[0]?.name || "video";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
+
+$("loadUrl").onclick = () => {
+  const raw = $("videoUrl").value.trim();
+  let parsed;
+  try { parsed = new URL(raw); }
+  catch { $("urlStatus").textContent = "Enter a valid video URL."; return; }
+
+  if(!["http:","https:"].includes(parsed.protocol)){
+    $("urlStatus").textContent = "Only HTTP and HTTPS links are supported.";
+    return;
+  }
+
+  $("urlStatus").textContent = "Trying to load video...";
+  $("urlPreview").style.display = "block";
+  $("urlVideo").src = parsed.href;
+  $("urlVideo").load();
+  $("urlVideo").onloadedmetadata = () => {
+    $("urlStatus").textContent = "Video loaded successfully.";
+  };
+  $("urlVideo").onerror = () => {
+    $("urlStatus").textContent = "Couldn't play this link. It may not be a direct video file or may block browser playback.";
+  };
+};
+
+$("saveUrl").onclick = () => {
+  const raw = $("videoUrl").value.trim();
+  try {
+    const parsed = new URL(raw);
+    if(["http:","https:"].includes(parsed.protocol)) window.open(parsed.href,"_blank","noopener");
+  } catch {
+    $("urlStatus").textContent = "Enter a valid URL first.";
+  }
+};
+</script>
+</body>
+</html>
+
