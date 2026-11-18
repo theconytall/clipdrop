@@ -4,184 +4,291 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClipDrop — Free Video Tool</title>
+<meta name="theme-color" content="#090910">
+<title>ClipDrop — Social Video Hub</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{
-  min-height:100vh;background:#090911;color:#f5f5fa;
-  font-family:Inter,system-ui,Arial,sans-serif;
-  display:flex;justify-content:center;padding:45px 18px;
+ background:#090910;color:#f5f3ff;
+ font-family:Inter,system-ui,Arial,sans-serif;
+ min-height:100vh;padding:25px 18px;
 }
-.container{width:100%;max-width:850px}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:75px}
-.logo{font-size:25px;font-weight:800;letter-spacing:-1px}
+.container{max-width:900px;margin:auto}
+header{
+ display:flex;justify-content:space-between;
+ align-items:center;padding:12px 0 65px;
+}
+.logo{font-size:27px;font-weight:850;letter-spacing:-1.5px}
 .logo span{color:#a78bfa}
-.pill{font-size:12px;color:#a78bfa;background:#a78bfa16;border:1px solid #a78bfa35;padding:8px 13px;border-radius:30px}
-.hero{text-align:center;margin-bottom:35px}
-.hero h1{font-size:clamp(35px,7vw,57px);letter-spacing:-2px;margin-bottom:14px}
-.hero h1 span{color:#a78bfa}
-.hero p{color:#9292a5;font-size:15px;line-height:1.7}
-.panel{background:#11111c;border:1px solid #252536;border-radius:19px;padding:25px;box-shadow:0 20px 80px #0005}
-.tabs{display:flex;gap:10px;margin-bottom:23px}
-.tab{flex:1;padding:13px;border:1px solid #29293a;border-radius:10px;background:#171725;color:#aaaabd;cursor:pointer;font-size:14px}
-.tab.active{background:#a78bfa1c;border-color:#a78bfa;color:#c4b5fd}
-.section{display:none}
-.section.active{display:block}
-.label{display:block;color:#c4c4d4;font-size:13px;margin-bottom:10px}
-.drop{border:1px dashed #45405f;background:#171725;border-radius:13px;padding:35px 15px;text-align:center;cursor:pointer;transition:.2s}
-.drop:hover,.drop.drag{border-color:#a78bfa;background:#a78bfa0b}
-.drop .symbol{font-size:32px;margin-bottom:12px}
-.drop strong{display:block;margin-bottom:7px}
-.drop small{color:#85859a}
-input[type=file]{display:none}
-input[type=url]{width:100%;background:#090911;border:1px solid #303044;color:white;padding:15px;border-radius:10px;outline:none;font-size:14px}
-input[type=url]:focus{border-color:#a78bfa}
-button.action{width:100%;margin-top:15px;padding:14px;background:#a78bfa;color:#100c1d;font-weight:750;border:0;border-radius:10px;cursor:pointer;font-size:14px;transition:.2s}
-button.action:hover{background:#c4b5fd;transform:translateY(-1px)}
-button:disabled{opacity:.5;cursor:not-allowed}
-.preview{display:none;margin-top:22px}
-video{width:100%;max-height:400px;background:#000;border-radius:12px}
-.fileinfo{color:#a5a5b8;font-size:12px;margin-top:10px;word-break:break-word}
-.status{font-size:13px;color:#b7a4ff;margin-top:13px;min-height:20px}
-.note{font-size:12px;color:#77778c;line-height:1.7;margin-top:20px;text-align:center}
-footer{text-align:center;color:#626276;font-size:12px;margin-top:30px}
-@media(max-width:500px){header{margin-bottom:55px}.panel{padding:17px}.tabs{gap:6px}.tab{font-size:12px;padding:12px 5px}}
+.badge{
+ color:#a78bfa;background:#a78bfa15;
+ border:1px solid #a78bfa35;border-radius:30px;
+ padding:8px 13px;font-size:11px;font-weight:700;
+}
+.hero{text-align:center;margin-bottom:38px}
+.hero h1{
+ font-size:clamp(38px,7vw,64px);
+ letter-spacing:-3px;line-height:1.1;margin-bottom:17px
+}
+.hero h1 span{
+ background:linear-gradient(90deg,#a78bfa,#e879f9);
+ -webkit-background-clip:text;background-clip:text;
+ color:transparent
+}
+.hero p{color:#9291a5;line-height:1.7;font-size:14px}
+.card{
+ background:#11111c;border:1px solid #252538;
+ border-radius:20px;padding:25px;
+ box-shadow:0 25px 90px #0005;
+}
+.section-title{font-size:14px;font-weight:750;margin-bottom:16px}
+.platforms{
+ display:grid;grid-template-columns:repeat(3,1fr);
+ gap:12px;margin-bottom:27px
+}
+.platform{
+ border:1px solid #29293c;background:#171725;
+ border-radius:13px;padding:17px 10px;
+ color:#c9c7d8;cursor:pointer;
+ display:flex;flex-direction:column;align-items:center;
+ gap:9px;transition:.2s;font-size:13px;font-weight:650
+}
+.platform:hover{border-color:#8b72d8;transform:translateY(-2px)}
+.platform.active{
+ border-color:#a78bfa;background:#a78bfa16;
+ color:#d9ccff;box-shadow:0 0 20px #a78bfa12
+}
+.platform svg{width:25px;height:25px}
+.input-label{font-size:13px;color:#c4c2d3;margin-bottom:10px;display:block}
+.input-wrap{position:relative}
+input{
+ width:100%;background:#090910;border:1px solid #303044;
+ padding:17px 15px;border-radius:11px;color:white;
+ outline:none;font-size:14px;transition:.2s
+}
+input:focus{border-color:#a78bfa;box-shadow:0 0 0 3px #a78bfa16}
+input::placeholder{color:#646477}
+.submit{
+ width:100%;padding:16px;margin-top:14px;
+ border:0;border-radius:11px;
+ background:linear-gradient(100deg,#a78bfa,#c084fc);
+ color:#100b1b;font-size:14px;font-weight:800;
+ cursor:pointer;transition:.2s
+}
+.submit:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.status{
+ display:none;margin-top:18px;padding:15px;
+ border:1px solid #343047;background:#191725;
+ border-radius:11px;font-size:13px;line-height:1.6;color:#c9baff
+}
+.status.show{display:block}
+.status.error{border-color:#713e50;color:#ffb7c7;background:#24151e}
+.status.success{border-color:#35634f;color:#a7edc7;background:#14231d}
+.status strong{display:block;margin-bottom:5px}
+.info{
+ margin-top:22px;text-align:center;
+ color:#77768b;font-size:12px;line-height:1.8
+}
+.divider{height:1px;background:#28283a;margin:24px 0}
+.bottom{
+ display:grid;grid-template-columns:repeat(3,1fr);
+ gap:12px;margin-top:22px
+}
+.feature{
+ background:#11111c;border:1px solid #242436;
+ border-radius:13px;padding:16px;text-align:center
+}
+.feature b{display:block;font-size:12px;margin-bottom:7px}
+.feature small{color:#77768c;font-size:11px;line-height:1.5}
+footer{text-align:center;margin:45px 0 15px;color:#555469;font-size:11px}
+@media(max-width:520px){
+ header{padding-bottom:48px}
+ .card{padding:17px}
+ .platforms{gap:8px}
+ .platform{padding:14px 5px;font-size:11px}
+ .bottom{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 <div class="container">
+
 <header>
-  <div class="logo">Clip<span>Drop</span>.</div>
-  <div class="pill">FREE · NO API CREDITS</div>
+ <div class="logo">Clip<span>Drop.</span></div>
+ <div class="badge">SOCIAL VIDEO HUB</div>
 </header>
 
-<div class="hero">
-  <h1>Your videos.<br><span>Your control.</span></h1>
-  <p>Preview and save your video files in one simple place.<br>No account. No API key. No subscriptions.</p>
+<section class="hero">
+ <h1>One link.<br><span>Multiple platforms.</span></h1>
+ <p>Your social video hub.<br>Choose a platform and paste a public video link.</p>
+</section>
+
+<main class="card">
+ <div class="section-title">01 — SELECT PLATFORM</div>
+
+ <div class="platforms" id="platforms">
+
+  <button class="platform active" data-platform="TikTok">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+    <path d="M14 3v11.5a4.5 4.5 0 1 1-4-4.47M14 3c.5 3 2.5 5 6 5"/>
+   </svg>
+   TikTok
+  </button>
+
+  <button class="platform" data-platform="Instagram">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+    <rect x="3" y="3" width="18" height="18" rx="5"/>
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M17.5 6.5h.01"/>
+   </svg>
+   Instagram
+  </button>
+
+  <button class="platform" data-platform="Facebook">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+    <path d="M14 21v-8h3l.5-4H14V7c0-1.2.4-2 2-2h2V1.5C17.3 1.3 16.2 1 15 1c-3.3 0-5 2-5 5.5V9H7v4h3v8"/>
+   </svg>
+   Facebook
+  </button>
+
+  <button class="platform" data-platform="YouTube">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+    <rect x="2" y="5" width="20" height="14" rx="4"/>
+    <path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none"/>
+   </svg>
+   YouTube
+  </button>
+
+  <button class="platform" data-platform="X">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+    <path d="M4 3h4.5L20 21h-4.5zM20 3 4 21"/>
+   </svg>
+   X
+  </button>
+
+  <button class="platform" data-platform="Pinterest">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="m9 21 2-7m1-2c-1 0-2-.7-2-2 0-2 1.5-4 3.5-4 1.7 0 2.5 1.2 2.5 2.8 0 2-1 4.2-3 4.2-1 0-1.5-.7-1.5-1.5"/>
+   </svg>
+   Pinterest
+  </button>
+
+ </div>
+
+ <div class="divider"></div>
+
+ <div class="section-title">02 — PASTE YOUR LINK</div>
+ <label class="input-label" for="videoLink">Video URL</label>
+ <div class="input-wrap">
+  <input id="videoLink" type="url" placeholder="https://www.tiktok.com/..." autocomplete="url">
+ </div>
+
+ <button class="submit" id="continueBtn">Continue →</button>
+
+ <div class="status" id="status" role="status" aria-live="polite"></div>
+
+ <div class="info">
+  Select a platform, paste its public video URL, and continue.<br>
+  Downloads are available only through supported, authorized methods.
+ </div>
+</main>
+
+<div class="bottom">
+ <div class="feature">
+  <b>✦ Simple</b>
+  <small>One clean interface for multiple platforms.</small>
+ </div>
+ <div class="feature">
+  <b>✦ No API credits</b>
+  <small>No paid API key is required by this website.</small>
+ </div>
+ <div class="feature">
+  <b>✦ Browser based</b>
+  <small>No installation required.</small>
+ </div>
 </div>
 
-<div class="panel">
-  <div class="tabs">
-    <button class="tab active" id="localTab">Local file</button>
-    <button class="tab" id="urlTab">Video link</button>
-  </div>
-
-  <div class="section active" id="localSection">
-    <label class="label">Choose a video from your device</label>
-    <div class="drop" id="drop">
-      <div class="symbol">📁</div>
-      <strong>Drop your video here</strong>
-      <small>or click to browse your files</small>
-    </div>
-    <input type="file" id="file" accept="video/*">
-    <div class="status" id="localStatus"></div>
-    <div class="preview" id="localPreview">
-      <video id="localVideo" controls playsinline></video>
-      <div class="fileinfo" id="fileInfo"></div>
-      <button class="action" id="saveLocal">Save video to device</button>
-    </div>
-  </div>
-
-  <div class="section" id="urlSection">
-    <label class="label" for="videoUrl">Direct video file URL</label>
-    <input type="url" id="videoUrl" placeholder="https://example.com/video.mp4">
-    <button class="action" id="loadUrl">Preview video</button>
-    <div class="status" id="urlStatus"></div>
-    <div class="preview" id="urlPreview">
-      <video id="urlVideo" controls playsinline></video>
-      <button class="action" id="saveUrl">Open video link</button>
-    </div>
-  </div>
-</div>
-
-<div class="note">
-  ClipDrop runs in your browser. Local files stay on your device.<br>
-  Direct links must point to video files and allow browser playback.<br>
-  Only use videos you own or have permission to download.
-</div>
-<footer>CLIPDROP © 2026 · SIMPLE. FREE. PRIVATE.</footer>
+<footer>CLIPDROP © 2026 · BUILT FOR THE WEB</footer>
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-let localObjectUrl = null;
+let selectedPlatform = "TikTok";
 
-function switchTab(which){
-  const local = which === "local";
-  $("localTab").classList.toggle("active",local);
-  $("urlTab").classList.toggle("active",!local);
-  $("localSection").classList.toggle("active",local);
-  $("urlSection").classList.toggle("active",!local);
+const buttons = document.querySelectorAll(".platform");
+const input = document.getElementById("videoLink");
+const statusBox = document.getElementById("status");
+const continueBtn = document.getElementById("continueBtn");
+
+buttons.forEach(button => {
+ button.addEventListener("click", () => {
+  buttons.forEach(b => b.classList.remove("active"));
+  button.classList.add("active");
+  selectedPlatform = button.dataset.platform;
+  statusBox.className = "status";
+  statusBox.textContent = "";
+  input.placeholder = "Paste a " + selectedPlatform + " link...";
+ });
+});
+
+function showStatus(type, title, message) {
+ statusBox.className = "status show " + type;
+ statusBox.innerHTML = "";
+ const heading = document.createElement("strong");
+ heading.textContent = title;
+ const body = document.createElement("span");
+ body.textContent = message;
+ statusBox.append(heading, body);
 }
-$("localTab").onclick = () => switchTab("local");
-$("urlTab").onclick = () => switchTab("url");
 
-function loadFile(file){
-  if(!file) return;
-  if(!file.type.startsWith("video/")){
-    $("localStatus").textContent = "Please choose a video file.";
-    return;
-  }
-  if(localObjectUrl) URL.revokeObjectURL(localObjectUrl);
-  localObjectUrl = URL.createObjectURL(file);
-  $("localVideo").src = localObjectUrl;
-  $("localPreview").style.display = "block";
-  $("fileInfo").textContent = file.name + " · " + (file.size/1024/1024).toFixed(2) + " MB";
-  $("localStatus").textContent = "Video loaded successfully.";
+function isPlatformUrl(url, platform) {
+ const hosts = {
+  TikTok: ["tiktok.com"],
+  Instagram: ["instagram.com"],
+  Facebook: ["facebook.com", "fb.watch"],
+  YouTube: ["youtube.com", "youtu.be"],
+  X: ["x.com", "twitter.com"],
+  Pinterest: ["pinterest.com", "pin.it"]
+ };
+ return hosts[platform].some(host =>
+  url.hostname === host || url.hostname.endsWith("." + host)
+ );
 }
-$("drop").onclick = () => $("file").click();
-$("file").onchange = e => loadFile(e.target.files[0]);
-$("drop").ondragover = e => {e.preventDefault();$("drop").classList.add("drag")};
-$("drop").ondragleave = () => $("drop").classList.remove("drag");
-$("drop").ondrop = e => {
-  e.preventDefault();
-  $("drop").classList.remove("drag");
-  loadFile(e.dataTransfer.files[0]);
-};
 
-$("saveLocal").onclick = () => {
-  if(!localObjectUrl) return;
-  const a = document.createElement("a");
-  a.href = localObjectUrl;
-  a.download = $("file").files[0]?.name || "video";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-};
+continueBtn.addEventListener("click", () => {
+ const value = input.value.trim();
 
-$("loadUrl").onclick = () => {
-  const raw = $("videoUrl").value.trim();
-  let parsed;
-  try { parsed = new URL(raw); }
-  catch { $("urlStatus").textContent = "Enter a valid video URL."; return; }
+ if(!value) {
+  showStatus("error", "Link required", "Paste a video link first.");
+  input.focus();
+  return;
+ }
 
-  if(!["http:","https:"].includes(parsed.protocol)){
-    $("urlStatus").textContent = "Only HTTP and HTTPS links are supported.";
-    return;
-  }
+ let url;
+ try {
+  url = new URL(value);
+ } catch {
+  showStatus("error", "Invalid link", "Please enter a complete valid URL.");
+  return;
+ }
 
-  $("urlStatus").textContent = "Trying to load video...";
-  $("urlPreview").style.display = "block";
-  $("urlVideo").src = parsed.href;
-  $("urlVideo").load();
-  $("urlVideo").onloadedmetadata = () => {
-    $("urlStatus").textContent = "Video loaded successfully.";
-  };
-  $("urlVideo").onerror = () => {
-    $("urlStatus").textContent = "Couldn't play this link. It may not be a direct video file or may block browser playback.";
-  };
-};
+ if(!["http:", "https:"].includes(url.protocol)) {
+  showStatus("error", "Unsupported link", "Only HTTP and HTTPS links are accepted.");
+  return;
+ }
 
-$("saveUrl").onclick = () => {
-  const raw = $("videoUrl").value.trim();
-  try {
-    const parsed = new URL(raw);
-    if(["http:","https:"].includes(parsed.protocol)) window.open(parsed.href,"_blank","noopener");
-  } catch {
-    $("urlStatus").textContent = "Enter a valid URL first.";
-  }
-};
+ if(!isPlatformUrl(url, selectedPlatform)) {
+  showStatus("error", "Platform mismatch", "This doesn't appear to be a " + selectedPlatform + " link. Select the correct platform.");
+  return;
+ }
+
+ showStatus(
+  "success",
+  "Link accepted ✓",
+  "Your " + selectedPlatform + " link is valid. This free version does not yet have a platform download service connected. Use the platform's own sharing or download options where available."
+ );
+});
 </script>
 </body>
 </html>
-
