@@ -128,27 +128,35 @@ async function checkBackend() {
   dot.className = "dot";
 
   try {
-    const response = await fetch(`${BACKEND}/health`, {
+    const response = await fetch(`${BACKEND}/`, {
       method: "GET",
-      signal: AbortSignal.timeout(15000)
+      signal: AbortSignal.timeout(20000)
     });
 
     if (!response.ok) throw new Error("Backend returned an error");
 
     const data = await response.json();
-    if (data.status !== "running" && data.status !== "ok") {
+    if (data.status !== "running") {
       throw new Error("Unexpected backend response");
     }
 
     backendOnline = true;
     dot.className = "dot online";
     label.textContent = "Backend connected";
-    if (note) note.textContent = "✓ Backend connected successfully. Media processing still needs to be configured.";
+
+    if (note) {
+      note.textContent = "✓ Backend connected successfully. Media processing still needs to be configured.";
+    }
   } catch (error) {
     backendOnline = false;
     dot.className = "dot offline";
     label.textContent = "Backend unavailable";
-    if (note) note.textContent = "Backend is unavailable right now. Render may be waking up. Try again in a moment.";
+
+    if (note) {
+      note.textContent = "Backend is unavailable right now. Render may be waking up. Try again in a moment.";
+    }
+
+    console.error("ClipDrop backend error:", error);
   }
 }
 
